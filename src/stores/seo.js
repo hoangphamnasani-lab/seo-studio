@@ -9,17 +9,6 @@ marked.setOptions({
   gfm: true,
 });
 
-// ── Config from .env ─────────────────────────────────────────────────────────
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-
-// Backend API base URL
-const API_BASE = BACKEND_URL;
-
-// Hàm lấy full URL cho API endpoint
-function getApiUrl(endpoint) {
-  return `${API_BASE}${endpoint}`;
-}
-
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function setStore(key, value) {
   try {
@@ -219,11 +208,19 @@ export const useSeoStore = defineStore("seo", () => {
     watch([sitemapUrlCount, sitemapDomain, sitemapStatus], saveSitemapMeta);
 
     // Auto-save titleList & selectedTitleIndex
-    watch(titleList, (v) => {
-      try { setStore("title_list", JSON.stringify(v)); } catch (e) {}
-    }, { deep: true });
+    watch(
+      titleList,
+      (v) => {
+        try {
+          setStore("title_list", JSON.stringify(v));
+        } catch (e) {}
+      },
+      { deep: true },
+    );
     watch(selectedTitleIndex, (v) => {
-      try { setStore("selected_title_index", String(v)); } catch (e) {}
+      try {
+        setStore("selected_title_index", String(v));
+      } catch (e) {}
     });
   }
 
@@ -268,7 +265,7 @@ export const useSeoStore = defineStore("seo", () => {
   async function callAIWithFallback(keys, prompt) {
     for (const key of keys) {
       try {
-        const response = await fetch(getApiUrl("/ai"), {
+        const response = await fetch("/ai", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ apiKey: key, prompt }),
@@ -625,7 +622,7 @@ export const useSeoStore = defineStore("seo", () => {
           "progress",
           `AI đang xử lý (key ${i + 1}/${keys.length})...`,
         );
-        const response = await fetch(getApiUrl("/ai"), {
+        const response = await fetch("/ai", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ apiKey: keys[i], prompt }),
@@ -905,7 +902,7 @@ export const useSeoStore = defineStore("seo", () => {
 
     for (const key of keys) {
       try {
-        const r = await fetch(getApiUrl("/ai"), {
+        const r = await fetch("/ai", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ apiKey: key, prompt }),
@@ -1043,9 +1040,7 @@ export const useSeoStore = defineStore("seo", () => {
     sitemapStatus.value = "⏳ Đang fetch sitemap...";
 
     try {
-      const r = await fetch(
-        getApiUrl(`/sitemap?url=${encodeURIComponent(sitemapUrl)}`),
-      );
+      const r = await fetch(`/sitemap?url=${encodeURIComponent(sitemapUrl)}`);
       if (!r.ok) {
         const j = await r.json();
         throw new Error(j.error ?? "Fetch failed");
@@ -1059,8 +1054,8 @@ export const useSeoStore = defineStore("seo", () => {
           urls
             .slice(0, 5)
             .map((u) =>
-              fetch(getApiUrl(`/sitemap?url=${encodeURIComponent(u)}`)).then(
-                (r) => r.text(),
+              fetch(`/sitemap?url=${encodeURIComponent(u)}`).then((r) =>
+                r.text(),
               ),
             ),
         );
