@@ -44,6 +44,7 @@ export const useSeoStore = defineStore("seo", () => {
   const website = ref("");
   const companyInfo = ref("");
   const imagePrompts = ref("");
+  const inputHtml = ref("");
   const imageUrls = ref("");
   const editorContent = ref("");
 
@@ -70,6 +71,10 @@ export const useSeoStore = defineStore("seo", () => {
 
   const genTitleLoading = ref(false);
   const usedTitles = ref([]);
+
+  // Title list: array of { text, used, charCount }
+  const titleList = ref([]);
+  const selectedTitleIndex = ref(-1);
 
   const notification = ref({ message: "", type: "success", visible: false });
 
@@ -166,6 +171,16 @@ export const useSeoStore = defineStore("seo", () => {
       if (ut) usedTitles.value = JSON.parse(ut);
     } catch (e) {}
 
+    // titleList + selectedTitleIndex
+    try {
+      const tl = getStore("title_list");
+      if (tl) titleList.value = JSON.parse(tl);
+    } catch (e) {}
+    try {
+      const idx = getStore("selected_title_index");
+      if (idx !== null) selectedTitleIndex.value = parseInt(idx, 10);
+    } catch (e) {}
+
     // Sitemap
     try {
       const kw = getStore("seo_sitemapKeywords");
@@ -202,6 +217,14 @@ export const useSeoStore = defineStore("seo", () => {
       { deep: true },
     );
     watch([sitemapUrlCount, sitemapDomain, sitemapStatus], saveSitemapMeta);
+
+    // Auto-save titleList & selectedTitleIndex
+    watch(titleList, (v) => {
+      try { setStore("title_list", JSON.stringify(v)); } catch (e) {}
+    }, { deep: true });
+    watch(selectedTitleIndex, (v) => {
+      try { setStore("selected_title_index", String(v)); } catch (e) {}
+    });
   }
 
   function saveSitemapMeta() {
@@ -309,44 +332,111 @@ export const useSeoStore = defineStore("seo", () => {
     }
 
     genTitleLoading.value = true;
+    selectedTitleIndex.value = -1;
 
     const usedList = usedTitles.value.length
       ? `\n\nCÁC TIÊU ĐỀ ĐÃ DÙNG (KHÔNG ĐƯỢC LẶP LẠI Ý TƯỞNG):\n${usedTitles.value
-          .slice(-30)
+          .slice(-50)
           .map((t, i) => `${i + 1}. ${t}`)
           .join("\n")}`
       : "";
 
-    const prompt = `Bạn là chuyên gia SEO copywriting. Tạo 1 tiêu đề bài viết SEO TỐT NHẤT và ĐỘC ĐÁO cho từ khóa sau.
+    const prompt = `Bạn là chuyên gia SEO copywriting. Tạo 10 tiêu đề bài viết SEO ĐỘC ĐÁO và KHÁC NHAU HOÀN TOÀN về cách tiếp cận cho từ khóa sau.
       Từ khóa: "${keyword.value}"${website.value ? `\nWebsite: ${website.value}` : ""}${desc.value ? `\nMô tả sơ bộ: ${desc.value}` : ""}${usedList}
 
       YÊU CẦU:
-      - Tiêu đề dài 50-65 ký tự (lý tưởng cho Google SERP)
+      - Mỗi tiêu đề dài 50-65 ký tự (lý tưởng cho Google SERP)
       - Chứa từ khóa tự nhiên, không nhồi nhét
-      - Hấp dẫn, kích thích click (dùng số, câu hỏi, lợi ích hoặc cảm xúc nếu phù hợp)
-      - KHÁC HOÀN TOÀN về cách tiếp cận so với danh sách tiêu đề đã dùng ở trên
+      - Đa dạng cách tiếp cận: có số (Top 5, 7 cách...), câu hỏi (Tại sao..., Làm sao...), listicle (Những..., Các...), benefit-driven (Lợi ích..., Giải pháp...), emotional ( Bí quyết..., Thủ thuật...)
+      - KHÁC HOÀN TOÀN về góc nhìn, format và emotional hook so với danh sách đã dùng
       - Viết bằng ngôn ngữ phù hợp với website (Tiếng Việt nếu website VN, Tiếng Anh nếu website quốc tế)
 
-      Chỉ trả về duy nhất tiêu đề, không giải thích, không dấu nháy, không ký tự thừa.`;
+      Trả về JSON array hợp lệ, mỗi tiêu đề là một string, không có backtick code block, không giải thích, không đánh số thứ tự:
+      ["Tiêu đề 1","Tiêu đề 2","Tiêu đề 3","Tiêu đề 4","Tiêu đề 5","Tiêu đề 6","Tiêu đề 7","Tiêu đề 8","Tiêu đề 9","Tiêu đề 10"]`;
 
-    // Thử từng key cho đến khi thành công
     const raw = await callAIWithFallback(keys, prompt);
-
     if (raw) {
-      const t = raw.trim().replace(/^["']|["']$/g, "");
-      if (t) {
-        title.value = t;
-        usedTitles.value.push(t);
-        saveUsedTitles();
-        notify(`✓ Tiêu đề mới (${t.length} ký tự)`, "success");
-      } else {
-        notify("AI không trả về tiêu đề, thử lại", "error");
+      try {
+        // Parse JSON array từ response
+        let clean = raw.trim();
+        // Loại bỏ backtick code block nếu có
+        clean = clean
+          .replace(/^```json\s*/i, "")
+          .replace(/\s*```$/i, "")
+          .trim();
+        let parsed = JSON.parse(clean);
+
+        // Hỗ trợ nếu AI trả về dạng {titles: [...]} hoặc {titles: "..."}
+        if (!Array.isArray(parsed)) {
+          const keys2 = Object.keys(parsed);
+          parsed = parsed[keys2[0]] || [];
+        }
+        if (typeof parsed === "string") {
+          parsed = JSON.parse(parsed);
+        }
+
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Tạo titleList mới, chưa used
+          titleList.value = parsed
+            .slice(0, 10)
+            .map((t) => ({
+              text: String(t)
+                .trim()
+                .replace(/^["']|["']$/g, ""),
+              used: false,
+              charCount: String(t).trim().length,
+            }))
+            .filter((t) => t.text.length > 10);
+
+          // Nếu ít hơn 10, fill cho đủ 10 (tránh lỗi UI)
+          while (titleList.value.length < 10) {
+            titleList.value.push({
+              text: `Tiêu đề mẫu ${titleList.value.length + 1}`,
+              used: false,
+              charCount: 0,
+            });
+          }
+
+          notify(`✓ Đã tạo ${titleList.value.length} tiêu đề mới`, "success");
+        } else {
+          notify("AI không trả về đúng định dạng, thử lại", "error");
+        }
+      } catch (e) {
+        console.error("[generateTitle] Parse error:", e, raw);
+        notify("Parse tiêu đề thất bại, thử lại", "error");
       }
     } else {
       notify("Tất cả API key thất bại", "error");
     }
 
     genTitleLoading.value = false;
+  }
+
+  // ── Select Title from list ─────────────────────────────────────────────────
+  function selectTitle(index) {
+    if (titleList.value[index] && !titleList.value[index].used) {
+      selectedTitleIndex.value = index;
+      title.value = titleList.value[index].text;
+    }
+  }
+
+  // ── Mark selected title as used (called after successful write) ────────────
+  function markTitleUsed() {
+    if (
+      selectedTitleIndex.value >= 0 &&
+      titleList.value[selectedTitleIndex.value]
+    ) {
+      const selected = titleList.value[selectedTitleIndex.value];
+      selected.used = true;
+      // Add to global usedTitles for uniqueness tracking
+      if (!usedTitles.value.includes(selected.text)) {
+        usedTitles.value.push(selected.text);
+        saveUsedTitles();
+      }
+      selectedTitleIndex.value = -1;
+      // Clear active title so user must select another
+      title.value = "";
+    }
   }
 
   // ── Build prompt text ──────────────────────────────────────────────────────
@@ -576,6 +666,8 @@ export const useSeoStore = defineStore("seo", () => {
     if (parsed) {
       updateLog(3, "done", "Đã parse kết quả thành công");
       updateLog(4, "done", "Hoàn thành!");
+      // Mark selected title as used after successful write
+      markTitleUsed();
       notify("Bài viết đã tạo xong!", "success");
     } else {
       updateLog(3, "error", "Parse JSON thất bại!");
@@ -1016,6 +1108,28 @@ export const useSeoStore = defineStore("seo", () => {
     notify(`Đã chọn: "${kw.keyword}"`, "success");
   }
 
+  function extractImages(html, base) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+    const seen = new Set();
+    const result = [];
+
+    doc.querySelectorAll("img").forEach((img) => {
+      const raw = img.getAttribute("data-src") || img.getAttribute("src") || "";
+      if (raw.includes("upload/") && !seen.has(raw)) {
+        seen.add(raw);
+        result.push(base + raw);
+      }
+    });
+
+    return result;
+  }
+
+  function runExtract() {
+    const urls = extractImages(inputHtml.value, href.value);
+    imageUrls.value = urls.join("\n");
+  }
+
   const copyToClipboard = (text, successMsg = "Đã copy") => {
     if (!text) return;
     navigator.clipboard
@@ -1039,6 +1153,7 @@ export const useSeoStore = defineStore("seo", () => {
     companyInfo,
     imagePrompts,
     imageUrls,
+    inputHtml,
     editorContent,
     promptTitle,
     promptFanpage,
@@ -1052,6 +1167,8 @@ export const useSeoStore = defineStore("seo", () => {
     sitemapUrlCount,
     sitemapDomain,
     genTitleLoading,
+    titleList,
+    selectedTitleIndex,
     usedTitles,
     notification,
     taskLogs,
@@ -1062,6 +1179,7 @@ export const useSeoStore = defineStore("seo", () => {
     notify,
     removeLongDash,
     generateTitle,
+    selectTitle,
     sendChat,
     sendPrompt,
     copyHtml,
@@ -1071,6 +1189,7 @@ export const useSeoStore = defineStore("seo", () => {
     slugify,
     getCurrentDate,
     copyToClipboard,
+    runExtract,
     parseMarkdown: (content) => {
       if (!content) return "";
       return marked.parse(content);
