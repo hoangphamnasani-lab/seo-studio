@@ -1,12 +1,30 @@
 {
+  "builds": [
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist",
+        "buildCommand": "npm run build"
+      }
+    }
+  ],
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/$1.js"
+      "source": "/api/sitemap",
+      "destination": "/api/sitemap.js"
+    },
+    {
+      "source": "/api/ai",
+      "destination": "/api/ai.js"
     },
     {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "destination": "/dist/index.html"
     }
   ]
 }

@@ -9,7 +9,9 @@
   },
   "dependencies": {
     "@ckeditor/ckeditor5-vue": "^7.4.0",
+    "@google/genai": "^1.49.0",
     "ckeditor5": "^48.0.0",
+    "groq-sdk": "^1.1.2",
     "jsonrepair": "^3.13.3",
     "marked": "^13.0.0",
     "pinia": "^2.1.7",

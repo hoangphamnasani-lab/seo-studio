@@ -265,7 +265,7 @@ export const useSeoStore = defineStore("seo", () => {
   async function callAIWithFallback(keys, prompt) {
     for (const key of keys) {
       try {
-        const response = await fetch("/ai", {
+        const response = await fetch("/api/ai", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ apiKey: key, prompt }),
@@ -622,7 +622,7 @@ export const useSeoStore = defineStore("seo", () => {
           "progress",
           `AI đang xử lý (key ${i + 1}/${keys.length})...`,
         );
-        const response = await fetch("/ai", {
+        const response = await fetch("/api/ai", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ apiKey: keys[i], prompt }),
@@ -902,7 +902,7 @@ export const useSeoStore = defineStore("seo", () => {
 
     for (const key of keys) {
       try {
-        const r = await fetch("/ai", {
+        const r = await fetch("/api/ai", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ apiKey: key, prompt }),
@@ -956,7 +956,7 @@ export const useSeoStore = defineStore("seo", () => {
     try {
       const result = await callAI(prompt);
       const clean = result.replace(/```json|```/g, "").trim();
-      const data = JSON.parse(clean);
+      const data = JSON.parse(jsonrepair ? jsonrepair(clean) : clean);
       sitemapKeywords.value = data.keywords ?? [];
     } catch (err) {
       console.error("[_analyzeKeywords]", err);
@@ -981,7 +981,7 @@ export const useSeoStore = defineStore("seo", () => {
     try {
       const result = await callAI(prompt);
       const clean = result.replace(/```json|```/g, "").trim();
-      const data = JSON.parse(clean);
+      const data = JSON.parse(jsonrepair ? jsonrepair(clean) : clean);
       sitemapContext.value = {
         brand_summary: data.brand_summary ?? "",
         brand_topics: data.brand_topics ?? [],
@@ -1040,7 +1040,9 @@ export const useSeoStore = defineStore("seo", () => {
     sitemapStatus.value = "⏳ Đang fetch sitemap...";
 
     try {
-      const r = await fetch(`/sitemap?url=${encodeURIComponent(sitemapUrl)}`);
+      const r = await fetch(
+        `/api/sitemap?url=${encodeURIComponent(sitemapUrl)}`,
+      );
       if (!r.ok) {
         const j = await r.json();
         throw new Error(j.error ?? "Fetch failed");
@@ -1054,7 +1056,7 @@ export const useSeoStore = defineStore("seo", () => {
           urls
             .slice(0, 5)
             .map((u) =>
-              fetch(`/sitemap?url=${encodeURIComponent(u)}`).then((r) =>
+              fetch(`/api/sitemap?url=${encodeURIComponent(u)}`).then((r) =>
                 r.text(),
               ),
             ),

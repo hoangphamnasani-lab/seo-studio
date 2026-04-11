@@ -24,7 +24,19 @@
       "WebFetch(domain:my-seo-gold.vercel.app)",
       "Bash(findstr /i \"output file\")",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" https://frontend-61xypbnh5-hoang-phams-projects-491519b3.vercel.app/)",
-      "Bash(curl -s https://frontend-61xypbnh5-hoang-phams-projects-491519b3.vercel.app/api/config)"
+      "Bash(curl -s https://frontend-61xypbnh5-hoang-phams-projects-491519b3.vercel.app/api/config)",
+      "Bash(vercel --prod --force)",
+      "Bash(curl -s \"https://frontend-7pbmrrylt-hoang-phams-projects-491519b3.vercel.app/api/config\")",
+      "Bash(npm install:*)",
+      "Bash(node -e \"const g = require\\('@google/genai'\\); console.log\\(Object.keys\\(g\\)\\)\")",
+      "Bash(node -e \"import\\('@google/genai'\\).then\\(m => console.log\\(Object.keys\\(m\\)\\)\\)\")",
+      "Bash(node -e \"import\\('groq-sdk'\\).then\\(m => console.log\\(Object.keys\\(m\\)\\)\\)\")",
+      "Bash(node -e \"import\\('@google/genai'\\).then\\(m => { const {GoogleGenAI} = m; console.log\\(typeof GoogleGenAI\\) }\\)\")",
+      "Bash(npm run:*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" https://frontend-pzasworuf-hoang-phams-projects-491519b3.vercel.app/)",
+      "Bash(vercel --prod -y -p my-seo)",
+      "Bash(vercel --help)",
+      "Bash(vercel switch:*)"
     ],
     "additionalDirectories": [
       "d:\\laragon\\www\\seo-studio",

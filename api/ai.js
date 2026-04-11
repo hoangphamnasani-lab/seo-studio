@@ -1,111 +1,81 @@
-import express from "express";
-import cors from "cors";
-import fetch from "node-fetch";
 import { Groq } from "groq-sdk";
 import { GoogleGenAI } from "@google/genai";
 
-const router = express.Router();
-router.use(cors());
-router.use(express.json({ limit: "10mb" }));
+// Vercel Serverless — POST /api/ai
+export default async function handler(req, res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-const GROQ_DEFAULT_MODEL =
-  process.env.GROQ_DEFAULT_MODEL ?? "openai/gpt-oss-20b";
-const GEMINI_DEFAULT_MODEL =
-  process.env.GEMINI_DEFAULT_MODEL ?? "gemini-2.5-flash";
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-// ─────────────────────────────────────────────
-//  UNIFIED NON-STREAMING AI ENDPOINT
-// ─────────────────────────────────────────────
-router.post("/ai", async (req, res) => {
-  const { apiKey, prompt, history, model } = req.body;
+  const { apiKey, prompt, history, model } = req.body ?? {};
 
-  if (!apiKey) {
-    return res.status(400).json({ error: "Missing apiKey" });
-  }
+  if (!apiKey) return res.status(400).json({ error: "Missing apiKey" });
 
-  const isGroq = apiKey.startsWith("gsk_");
-  const isGemini = apiKey.startsWith("AIza");
+  const isGroq    = apiKey.startsWith("gsk_");
+  const isGemini  = apiKey.startsWith("AIza");
+  if (!isGroq && !isGemini) return res.status(400).json({ error: "Invalid API key prefix" });
 
-  if (!isGroq && !isGemini) {
-    return res.status(400).json({ error: "Invalid API key prefix" });
-  }
+  const GROQ_DEFAULT_MODEL   = process.env.GROQ_DEFAULT_MODEL   ?? "llama-3.3-70b-versatile";
+  const GEMINI_DEFAULT_MODEL = process.env.GEMINI_DEFAULT_MODEL ?? "gemini-2.0-flash";
 
   try {
     if (isGroq) {
-      // Groq non-streaming
-      let msgs = [];
+      // ── Groq via groq-sdk ────────────────────────────────────────────────
+      const groq = new Groq({ apiKey });
 
-      const baseSystem =
-        "Return ONLY the final JSON array. Do NOT include reasoning. The final answer MUST be in content.";
+      const baseSystem = "Return ONLY the final JSON array. Do NOT include reasoning. The final answer MUST be in content.";
+      let messages = [];
 
       if (prompt) {
-        msgs = [
+        messages = [
           { role: "system", content: baseSystem },
-          { role: "user", content: prompt },
+          { role: "user",   content: prompt },
         ];
       } else if (history) {
-        let systemContent = baseSystem;
-
-        if (history.system_instruction?.parts?.length) {
-          systemContent += "\n" + history.system_instruction.parts[0].text;
-        }
-
-        msgs.push({
-          role: "system",
-          content: systemContent,
-        });
-
+        const systemContent = history.system_instruction?.parts?.length
+          ? baseSystem + "\n" + history.system_instruction.parts[0].text
+          : baseSystem;
+        messages = [{ role: "system", content: systemContent }];
         (history.contents ?? []).forEach((item) =>
-          msgs.push({
-            role: item.role == "model" ? "assistant" : "user",
+          messages.push({
+            role: item.role === "model" ? "assistant" : "user",
             content: item.parts?.[0]?.text ?? "",
-          }),
+          })
         );
-
-        if (msgs.at(-1)?.role == "assistant") msgs.pop();
+        if (messages.at(-1)?.role === "assistant") messages.pop();
       }
 
-      const groq = new Groq({
-        apiKey: apiKey,
-      });
-      const chatCompletion = await groq.chat.completions.create({
+      const chat = await groq.chat.completions.create({
         model: model ?? GROQ_DEFAULT_MODEL,
-        messages: msgs,
+        messages,
         temperature: 1,
         max_completion_tokens: 800,
-        stream: false,
       });
 
-      const result =
-        chatCompletion.choices?.[0]?.message?.content?.trim() ?? "";
-      return res.json({ result });
-    } else {
-      // Gemini non-streaming
-      let contents;
+      const result = chat.choices?.[0]?.message?.content?.trim() ?? "";
+      return res.status(200).json({ result });
 
-      if (history) {
-        contents = history.contents ?? [];
-      } else if (prompt) {
+    } else {
+      // ── Gemini via @google/genai ─────────────────────────────────────────
+      const ai = new GoogleGenAI({ apiKey });
+
+      let contents = history?.contents ?? [];
+      if (!history && prompt) {
         contents = [{ role: "user", parts: [{ text: prompt }] }];
       }
 
-      const genAi = new GoogleGenAI({
-        apiKey: apiKey,
-      });
-      const chatCompletion = await genAi.models.generateContent({
-        model: model ?? GEMINI_DEFAULT_MODEL,
-        contents: contents,
-        config: {
-          responseMimeType: "application/json",
-        },
+      const response = await ai.models.generateContent({
+        model: GEMINI_DEFAULT_MODEL,
+        contents,
       });
 
-      const result = chatCompletion.text.trim() ?? "";
-      return res.json({ result });
+      const result = response.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
+      return res.status(200).json({ result });
     }
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return res.status(500).json({ error: e.message });
   }
-});
-
-export default router;
+}
