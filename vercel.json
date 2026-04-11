@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "dist" }
+    },
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    { "src": "/api/config", "dest": "/api/config.js" },
+    { "src": "/api/ai", "dest": "/api/ai.js" },
+    { "src": "/api/sitemap", "dest": "/api/sitemap.js" },
+    { "src": "/api/sitemap\\?.*", "dest": "/api/sitemap.js" },
+    { "src": "/(.*)", "dest": "/frontend/$1" }
+  ]
+}

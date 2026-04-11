@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/NINA/Documents/projects/multi-package-project/**)",
+      "Read(//c/Users/NINA/Documents/projects/multi-package-project/frontend/**)",
+      "Read(//c/Users/NINA/Documents/projects/multi-package-project/backend/**)",
+      "Read(//c/Users/NINA/seo-studio/backend/**)",
+      "Read(//c/Users/NINA/seo-studio/frontend/src/stores/**)",
+      "Read(//c/Users/NINA/seo-studio/frontend/**)"
+    ],
+    "additionalDirectories": [
+      "d:\\laragon\\www\\seo-studio"
+    ]
+  }
+}
