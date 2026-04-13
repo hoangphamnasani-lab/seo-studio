@@ -340,11 +340,10 @@ export const useSeoStore = defineStore("seo", () => {
 
     const prompt = `Bạn là chuyên gia SEO copywriting. Tạo 10 tiêu đề bài viết SEO ĐỘC ĐÁO và KHÁC NHAU HOÀN TOÀN về cách tiếp cận cho từ khóa sau.
       Từ khóa: "${keyword.value}"${website.value ? `\nWebsite: ${website.value}` : ""}${desc.value ? `\nMô tả sơ bộ: ${desc.value}` : ""}${usedList}
-
       YÊU CẦU:
       - Mỗi tiêu đề dài 50-65 ký tự (lý tưởng cho Google SERP)
       - Chứa từ khóa tự nhiên, không nhồi nhét
-      - Đa dạng cách tiếp cận: có số (Top 5, 7 cách...), câu hỏi (Tại sao..., Làm sao...), listicle (Những..., Các...), benefit-driven (Lợi ích..., Giải pháp...), emotional ( Bí quyết..., Thủ thuật...)
+      - Đa dạng cách tiếp cận, không trùng ý tưởng
       - KHÁC HOÀN TOÀN về góc nhìn, format và emotional hook so với danh sách đã dùng
       - Viết bằng ngôn ngữ phù hợp với website (Tiếng Việt nếu website VN, Tiếng Anh nếu website quốc tế)
 
@@ -948,7 +947,7 @@ export const useSeoStore = defineStore("seo", () => {
       - Ưu tiên long-tail có search intent rõ ràng (thương mại hoặc thông tin)
       - LOẠI BỎ: từ khóa chung chung, vô nghĩa, không liên quan đến website
       - Mỗi từ khóa phải thuyết phục để viết bài tin tức/blog tăng click
-      - Đề xuất 20-30 từ khóa đa dạng
+      - Đề xuất các từ khóa đa dạng
 
       Trả về JSON hợp lệ (không backtick):
       {"keywords":[{"keyword":"...","type":"Sản phẩm|Danh mục|Blog|Dịch vụ|So sánh|Hướng dẫn","intent":"Thương mại|Thông tin|Điều hướng|Giao dịch","difficulty":"Thấp|Trung bình|Cao","reason":"Lý do nên viết bài về từ khóa này"}]}`;
@@ -971,8 +970,8 @@ export const useSeoStore = defineStore("seo", () => {
       Từ phổ biến: ${wordCtx}
 
       NHIỆM VỤ:
-      1. Xác định CHỦ ĐỀ CHÍNH website cung cấp (tối đa 8 topics)
-      2. Liệt kê URL quan trọng nhất (tối đa 10) nên được link đến khi viết bài
+      1. Xác định CHỦ ĐỀ CHÍNH website cung cấp
+      2. Liệt kê URL quan trọng nhất nên được link đến khi viết bài
       3. Mô tả ngắn brand: họ cung cấp gì, cho ai, ở đâu
 
       Trả về JSON hợp lệ (không backtick):

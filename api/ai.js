@@ -8,31 +8,34 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== "POST")
+    return res.status(405).json({ error: "Method not allowed" });
 
   const { apiKey, prompt, history, model } = req.body ?? {};
 
   if (!apiKey) return res.status(400).json({ error: "Missing apiKey" });
 
-  const isGroq    = apiKey.startsWith("gsk_");
-  const isGemini  = apiKey.startsWith("AIza");
-  if (!isGroq && !isGemini) return res.status(400).json({ error: "Invalid API key prefix" });
+  const isGroq = apiKey.startsWith("gsk_");
+  const isGemini = apiKey.startsWith("AIza");
+  if (!isGroq && !isGemini)
+    return res.status(400).json({ error: "Invalid API key prefix" });
 
-  const GROQ_DEFAULT_MODEL   = process.env.GROQ_DEFAULT_MODEL   ?? "llama-3.3-70b-versatile";
-  const GEMINI_DEFAULT_MODEL = process.env.GEMINI_DEFAULT_MODEL ?? "gemini-2.0-flash";
+  const GROQ_DEFAULT_MODEL = "openai/gpt-oss-20b";
+  const GEMINI_DEFAULT_MODEL = "gemini-2.5-flash";
 
   try {
     if (isGroq) {
       // ── Groq via groq-sdk ────────────────────────────────────────────────
       const groq = new Groq({ apiKey });
 
-      const baseSystem = "Return ONLY the final JSON array. Do NOT include reasoning. The final answer MUST be in content.";
+      const baseSystem =
+        "Return ONLY the final JSON array. Do NOT include reasoning. The final answer MUST be in content.";
       let messages = [];
 
       if (prompt) {
         messages = [
           { role: "system", content: baseSystem },
-          { role: "user",   content: prompt },
+          { role: "user", content: prompt },
         ];
       } else if (history) {
         const systemContent = history.system_instruction?.parts?.length
@@ -43,7 +46,7 @@ export default async function handler(req, res) {
           messages.push({
             role: item.role === "model" ? "assistant" : "user",
             content: item.parts?.[0]?.text ?? "",
-          })
+          }),
         );
         if (messages.at(-1)?.role === "assistant") messages.pop();
       }
@@ -57,7 +60,6 @@ export default async function handler(req, res) {
 
       const result = chat.choices?.[0]?.message?.content?.trim() ?? "";
       return res.status(200).json({ result });
-
     } else {
       // ── Gemini via @google/genai ─────────────────────────────────────────
       const ai = new GoogleGenAI({ apiKey });
@@ -72,7 +74,8 @@ export default async function handler(req, res) {
         contents,
       });
 
-      const result = response.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
+      const result =
+        response.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
       return res.status(200).json({ result });
     }
   } catch (e) {
