@@ -20,7 +20,7 @@ export default async function handler(req, res) {
   if (!isGroq && !isGemini)
     return res.status(400).json({ error: "Invalid API key prefix" });
 
-  const GROQ_DEFAULT_MODEL = "openai/gpt-oss-20b";
+  const GROQ_DEFAULT_MODEL = "llama-3.1-8b-instant";
   const GEMINI_DEFAULT_MODEL = "gemini-2.5-flash";
 
   try {
