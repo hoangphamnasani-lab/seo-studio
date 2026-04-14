@@ -17,11 +17,13 @@ export default async function handler(req, res) {
 
   const isGroq = apiKey.startsWith("gsk_");
   const isGemini = apiKey.startsWith("AIza");
-  if (!isGroq && !isGemini)
+  const isBeeknoee = apiKey.startWith("sk-bee");
+  if (!isGroq && !isGemini && !isBeeknoee)
     return res.status(400).json({ error: "Invalid API key prefix" });
 
   const GROQ_DEFAULT_MODEL = "llama-3.1-8b-instant";
   const GEMINI_DEFAULT_MODEL = "gemini-2.5-flash";
+  const BEEKNOEE_DEFAUL_MODEL = "claude-sonnet-4-5-20250929";
 
   try {
     if (isGroq) {
@@ -60,7 +62,7 @@ export default async function handler(req, res) {
 
       const result = chat.choices?.[0]?.message?.content?.trim() ?? "";
       return res.status(200).json({ result });
-    } else {
+    } else if (isGemini) {
       // ── Gemini via @google/genai ─────────────────────────────────────────
       const ai = new GoogleGenAI({ apiKey });
 
@@ -76,6 +78,25 @@ export default async function handler(req, res) {
 
       const result =
         response.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
+      return res.status(200).json({ result });
+    } else if (isBeeknoee) {
+      const response = await fetch(
+        "https://platform.beeknoee.com/api/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + apiKey,
+          },
+          body: JSON.stringify({
+            model: BEEKNOEE_DEFAUL_MODEL,
+            messages: contents,
+          }),
+        },
+      );
+
+      const data = await response.json();
+      const result = data.choices[0].message.content?.trim() ?? "";
       return res.status(200).json({ result });
     }
   } catch (e) {
