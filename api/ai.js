@@ -18,7 +18,8 @@ export default async function handler(req, res) {
   const isGroq = apiKey.startsWith("gsk_");
   const isGemini = apiKey.startsWith("AIza");
   const isBeeknoee = apiKey.startWith("sk-bee");
-  alert(apiKey, isBeeknoee);
+  // alert(apiKey, isBeeknoee);
+  return res.status(200).json({ apiKey, isBeeknoee });
 
   if (!isGroq && !isGemini && !isBeeknoee)
     return res.status(400).json({ error: "Invalid API key prefix" });
